@@ -47,15 +47,17 @@ public class Main{
 							Long.parseLong(timestamp.group(1)),
 							Double.parseDouble(gmv.group(1)));
 					DB.addStat(stat);
-					System.out.println("\nCrruent Average:"+stat.average());
+					System.out.println("\nCurrent Average: "+stat.average());
 					HBStat min = DB.minBefore(stat);
 					HBStat min15 = DB.min15Before(stat);
 					HBStat hour = DB.hourBefore(stat);
-					System.out.println("Past Minute: "+trendString(stat,min));
-					if(min15.timestamp!=min.timestamp){
-						System.out.println("Past 15Min : "+trendString(stat,min15));
+					if(stat.sold!=min.sold){
+						System.out.println("Past Minute: "+trendString(stat,min));
 					}
-					if(hour.timestamp!=min15.timestamp){
+					if(min15.sold!=min.sold){
+						System.out.println("Past 15 Min: "+trendString(stat,min15));
+					}
+					if(hour.sold!=min15.sold){
 						System.out.println("Past Hour  : "+trendString(stat,hour));
 					}
 				}
