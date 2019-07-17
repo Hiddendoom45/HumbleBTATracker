@@ -17,7 +17,7 @@ public class Main{
 	private static String trendString(HBStat stat, HBStat old){
 		double vel = HBStat.velocity(stat, old, TimeUnit.MINUTES);
 		String velocity = "";
-		if(vel<0){
+		if(vel<1){
 			vel = HBStat.velocity(stat, old, TimeUnit.HOURS);
 			velocity = String.format("% 9.3f sold/hour", vel);
 		}
