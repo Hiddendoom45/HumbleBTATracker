@@ -75,7 +75,7 @@ public class Main{
 		if(args.length<1){
 			System.out.println("arguments: [url to bundle] [database file name?]");
 		}
-		if(args.length>2){
+		if(args.length>=2){
 			DB.retry(args[1]);
 		}
 		URL url = null;
