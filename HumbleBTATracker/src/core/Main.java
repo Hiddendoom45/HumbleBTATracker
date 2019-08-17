@@ -59,7 +59,6 @@ public class Main{
 				StatCollector collector = new StatCollector(m2.group(1)+"/humbler/bundlestats/"+m3.group(1)+"/"+m.group(1), db);
 				collector.setCallback(new Printer());
 				Thread t = new Thread(collector);
-				t.setDaemon(true);
 				t.start();
 			}
 			else{
