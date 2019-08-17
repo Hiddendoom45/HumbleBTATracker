@@ -14,6 +14,9 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 public class Main{
+	
+	private static DB db;
+	
 	private static String trendString(HBStat stat, HBStat old){
 		double vel = HBStat.velocity(stat, old, TimeUnit.MINUTES);
 		String velocity = "";
@@ -34,23 +37,24 @@ public class Main{
 		Matcher units = Pattern.compile("\"units\": (\\d*)").matcher("");
 		Matcher timestamp = Pattern.compile("\"timestamp\": (\\d*)").matcher("");
 		Matcher gmv = Pattern.compile("\"gmv\": \"([0-9.]*)\"").matcher("");
-		SimpleDateFormat format = new SimpleDateFormat("EEE, MMM dd yyyy HH:mm:ss zz");
+		SimpleDateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zz");
 		while(true){
 			try{
 				Response res = Jsoup.connect(apiURL).ignoreContentType(true).execute();
 				units.reset(res.body());
 				timestamp.reset(res.body());
 				gmv.reset(res.body());
+				System.out.println(res.body());
 				if(units.find()&&timestamp.find()&&gmv.find()){
 					HBStat stat = new HBStat(
 							Integer.parseInt(units.group(1)),
 							Long.parseLong(timestamp.group(1)),
 							Double.parseDouble(gmv.group(1)));
-					DB.addStat(stat);
+					db.addStat(stat);
 					System.out.println("\nCurrent Average: "+stat.average());
-					HBStat min = DB.minBefore(stat);
-					HBStat min15 = DB.min15Before(stat);
-					HBStat hour = DB.hourBefore(stat);
+					HBStat min = db.minBefore(stat);
+					HBStat min15 = db.min15Before(stat);
+					HBStat hour = db.hourBefore(stat);
 					if(stat.sold!=min.sold){
 						System.out.println("Past Minute: "+trendString(stat,min));
 					}
@@ -61,7 +65,6 @@ public class Main{
 						System.out.println("Past Hour  : "+trendString(stat,hour));
 					}
 				}
-				
 				Date expire = format.parse(res.header("expires"));
 				TimeUnit.MILLISECONDS.sleep(expire.getTime()-System.currentTimeMillis());
 			}catch(Exception e){
@@ -76,7 +79,10 @@ public class Main{
 			System.out.println("arguments: [url to bundle] [database file name?]");
 		}
 		if(args.length>=2){
-			DB.retry(args[1]);
+			db = new DB(args[1]);
+		}
+		else{
+			db = new DB();
 		}
 		URL url = null;
 		try{
@@ -98,7 +104,6 @@ public class Main{
 				System.out.println("fail");
 			}
 		}catch(IOException e){
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		

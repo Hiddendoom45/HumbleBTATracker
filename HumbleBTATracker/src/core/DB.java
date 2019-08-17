@@ -7,14 +7,20 @@ import java.sql.ResultSet;
 import java.util.concurrent.TimeUnit;
 
 public class DB{
-	private static Connection conn;
-	private static PreparedStatement insert = null;
-	private static PreparedStatement get = null;
-	private static PreparedStatement recent = null;
-	static{
-		retry(":memory:");
+	private Connection conn;
+	private PreparedStatement insert = null;
+	private PreparedStatement get = null;
+	private PreparedStatement recent = null;
+	
+	public DB(){
+		this(":memory:");
 	}
-	public static void retry(String filename){
+	
+	public DB(String dbname){
+		retry(dbname);
+	}
+	
+	public void retry(String filename){
 		try{
 			conn = DriverManager.getConnection("jdbc:sqlite:"+filename);
 			conn.createStatement().execute("CREATE TABLE IF NOT EXISTS HB_DATA (SALES INT, TIMESTAMP INT PRIMARY KEY, PAID REAL)");
@@ -25,7 +31,7 @@ public class DB{
 			e.printStackTrace();
 		}
 	}
-	public static void addStat(HBStat stat){
+	public void addStat(HBStat stat){
 		try{
 			insert.setInt(1, stat.sold);
 			insert.setLong(2, stat.timestamp);
@@ -33,7 +39,7 @@ public class DB{
 			insert.execute();
 		}catch(Exception e){}
 	}
-	public static HBStat mostRecent(){
+	public HBStat mostRecent(){
 		try{
 			ResultSet res = recent.executeQuery();
 			HBStat stat = new HBStat(res.getInt(1),res.getLong(2),res.getDouble(3));
@@ -42,16 +48,16 @@ public class DB{
 			return null;
 		}
 	}
-	public static HBStat minBefore(HBStat since){
+	public HBStat minBefore(HBStat since){
 		return oldestSince(since.timestamp-TimeUnit.MINUTES.toSeconds(1));
 	}
-	public static HBStat min15Before(HBStat since){
+	public HBStat min15Before(HBStat since){
 		return oldestSince(since.timestamp-TimeUnit.MINUTES.toSeconds(15));
 	}
-	public static HBStat hourBefore(HBStat since){
+	public HBStat hourBefore(HBStat since){
 		return oldestSince(since.timestamp-TimeUnit.HOURS.toSeconds(1));
 	}
-	private static HBStat oldestSince(long timestamp){
+	private HBStat oldestSince(long timestamp){
 		try{
 			get.setLong(1, timestamp);
 			ResultSet res = get.executeQuery();
