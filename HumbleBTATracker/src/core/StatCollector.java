@@ -61,7 +61,11 @@ public class StatCollector implements Runnable{
 					if(callback!=null)callback.accept(stat);
 				}
 				Date expire = format.parse(res.header("expires"));
-				TimeUnit.MILLISECONDS.sleep(expire.getTime()-System.currentTimeMillis());
+				long delay = expire.getTime()-System.currentTimeMillis();
+				if(expire.getTime()-System.currentTimeMillis()<500){
+					delay = 3000;
+				}
+				TimeUnit.MILLISECONDS.sleep(delay);
 			}catch(InterruptedException e){
 				break;
 			}catch(Exception e){
