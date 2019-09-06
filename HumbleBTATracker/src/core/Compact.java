@@ -139,7 +139,7 @@ public class Compact{
 	
 	public static void main(String[] args) throws SQLException{
 		boolean compact = true;
-		if(args[0].equals("merge")){
+		if(args.length>0&&args[0].equalsIgnoreCase("merge")){
 			compact = false;
 			args = Arrays.copyOfRange(args, 1, args.length);
 		}
