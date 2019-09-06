@@ -5,7 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.PriorityQueue;
 
 /**
@@ -20,17 +20,20 @@ public class Compact{
 	private ResultSet data;
 	private PreparedStatement insert;
 	
+	//merge mode, does not compact data, keeps all entries
+	boolean noCompact = false;
 	//last row
 	private long timestamp = -1;
 	private int sales = 0;
 	private double paid = 0;
 	
-	public Compact(String filename) throws SQLException{
+	public Compact(String filename, boolean compact) throws SQLException{
 		conn = DriverManager.getConnection("jdbc:sqlite:"+filename);
 		conn.createStatement().execute("DROP TABLE IF EXISTS HB_DATA_COPY");
 		conn.createStatement().execute("CREATE TABLE HB_DATA_COPY (SALES INT, TIMESTAMP INT PRIMARY KEY, PAID REAL)");
 		data = conn.createStatement().executeQuery("SELECT * FROM HB_DATA ORDER BY TIMESTAMP ASC");
 		insert = conn.prepareStatement("INSERT INTO HB_DATA_COPY VALUES (?,?,?)");
+		this.noCompact = !compact;
 	}
 	
 	public PriceSet next() throws SQLException{
@@ -42,13 +45,13 @@ public class Compact{
 		while(data.next()){
 			end = false;
 			double p = data.getDouble("PAID");
-			
+
 			if(first==-1){
 				paid = p;
 				first = data.getLong("TIMESTAMP");
 				sales = data.getInt("SALES");
 			}
-			else if(p!=paid){
+			else if(p!=paid||noCompact){
 				timestamp = data.getLong("TIMESTAMP");
 				this.sales = data.getInt("SALES");
 				this.paid = p;
@@ -59,7 +62,7 @@ public class Compact{
 		}
 		if(end) timestamp = -1;
 		if(first!=-1){
-			return new PriceSet(first, last, sales, paid);
+			return new PriceSet(this, first, last, sales, paid);
 		}
 		return null;
 	}
@@ -84,11 +87,13 @@ public class Compact{
 		conn.createStatement().execute("VACUUM");
 	}
 	private static class PriceSet implements Comparable<PriceSet>{
+		Compact source;
 		long first;
 		long last;
 		int sales;
 		double paid;
-		public PriceSet(long first, long last, int sales, double paid){
+		public PriceSet(Compact source, long first, long last, int sales, double paid){
+			this.source = source;
 			this.first = first;
 			this.last = last;
 			this.sales = sales;
@@ -96,9 +101,8 @@ public class Compact{
 		}
 		
 		@Override
-		public int compareTo(PriceSet o){
-			if(o!=null){
-				PriceSet other = (PriceSet)o;
+		public int compareTo(PriceSet other){
+			if(other!=null){
 				if(other.first<this.first){
 					if(other.last<this.first){
 						return 1;
@@ -134,11 +138,16 @@ public class Compact{
 	}
 	
 	public static void main(String[] args) throws SQLException{
+		boolean compact = true;
+		if(args[0].equals("merge")){
+			compact = false;
+			args = Arrays.copyOfRange(args, 1, args.length);
+		}
 		if(args.length==0){
 			System.out.println("Requires at least 1 argument for database in");
 		}
 		else if(args.length==1){
-			Compact c = new Compact(args[0]);
+			Compact c = new Compact(args[0], compact);
 			while(true){
 				PriceSet ps = c.next();
 				if(ps==null)break;
@@ -149,35 +158,28 @@ public class Compact{
 		else{
 			Compact[] dbs = new Compact[args.length];
 			for(int i = 0; i<dbs.length; i++){
-				dbs[i] = new Compact(args[i]);
+				dbs[i] = new Compact(args[i], compact);
 			}
 			PriorityQueue<PriceSet> queue = new PriorityQueue<PriceSet>();
-			HashMap<PriceSet,Compact> revMap = new HashMap<PriceSet,Compact>();
 			for(int i = 0; i<dbs.length; i++){
 				PriceSet p = dbs[i].next();
 				if(p!=null){
 					queue.offer(p);
-					revMap.put(p, dbs[i]);
 				}
 			}
 			while(!queue.isEmpty()){
 				PriceSet p = queue.poll();
-				Compact c = revMap.get(p);
-				revMap.remove(p);
+				Compact c = p.source;
 				PriceSet pn = c.next();
 				if(pn!=null){
 					queue.offer(pn);
-					revMap.put(pn, c);
 				}
-				if(p==null)break;//error in logic if it reaches this point
 				while(p.compareTo(queue.peek())==0){
 					PriceSet p2 = queue.poll();
-					Compact c2 = revMap.get(p2);
-					revMap.remove(p2);
+					Compact c2 = p2.source;
 					PriceSet p2n = c2.next();
 					if(p2n!=null){
 						queue.offer(p2n);
-						revMap.put(p2n, c2);
 					}
 					p.merge(p2);
 				}
