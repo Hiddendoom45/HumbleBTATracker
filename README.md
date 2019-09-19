@@ -25,7 +25,7 @@ java -jar BTATrack.jar [url to bundle] [database file name?]
 You can drag and drop the BTATrack.jar file into the terminal instead of typing out the full path. 
 Make sure to quote the bundle url with `""` to avoid additional processes being spawned by `&` characters in the url.
 
-The database file name is optional if you want to keep the data recorded or avoid losing data between program restarts. By default the program uses the in memory sql database
+The database file name is optional if you want to keep the data recorded or avoid losing data between program restarts. By default the program uses the in memory sql database. A prefix of membackup: will use the in memory database backing up to the given database file. This is less disk intensive than specifying just the database file at the risk of losing some data if the program stops unexpectedly i.e. power loss.
 
 As the program runs forever to terminate press `CTRL - C` to stop the program
 
