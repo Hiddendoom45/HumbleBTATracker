@@ -1,9 +1,14 @@
 package core;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.concurrent.TimeUnit;
 
 public class DB{
@@ -12,12 +17,25 @@ public class DB{
 	private PreparedStatement get = null;
 	private PreparedStatement recent = null;
 	
+	private String backupdb = "";
+	
 	public DB(){
 		this(":memory:");
 	}
 	
+	
 	public DB(String dbname){
+		if(dbname.startsWith("membackup:")){
+			backupdb = dbname.substring("membackup:".length());
+			BackupAgent.getInstance().addDB(this);
+			dbname = ":memory:";
+		}
 		retry(dbname);
+		if(!backupdb.equals("")){
+			try{
+				conn.createStatement().execute("restore from "+backupdb);
+			}catch(SQLException e){}
+		}
 	}
 	
 	public void retry(String filename){
@@ -66,5 +84,18 @@ public class DB{
 		}catch(Exception e){
 			return null;
 		}
+	}
+	public void backup(){
+		try{
+			boolean bakflag = false;
+			try{
+				Files.copy(new File(backupdb).toPath(), new File(backupdb+".bak").toPath(), StandardCopyOption.REPLACE_EXISTING);
+				bakflag = true;
+			}catch(IOException e){}
+			conn.createStatement().execute("backup to "+backupdb);
+			if(bakflag){
+				Files.delete(new File(backupdb+".bak").toPath());
+			}
+		}catch(SQLException | IOException e){}
 	}
 }
