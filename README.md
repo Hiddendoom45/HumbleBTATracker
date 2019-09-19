@@ -40,6 +40,28 @@ Past Hour  :     5.285 sold/min  increasing by  0.020388cents/minute, increases 
 Initially it will only print the current average with the changed averaged over the past minute/15 minutes/hour added as more 
 data is collected
 
+## Compressing / Merging databases
+
+The database file generated can be compressed with the following command.
+
+```
+java -cp BTATrack.jar core.Compact [database...]
+```
+
+The database is compressed by removing duplicate entries with the same price keeping only the times it was first seen and last seen.
+
+One or more databases may be specified, if more than one is specified then it will assume the data is from the same bundle and merge the data together and compress them. Each database will contain the same compressed information after the program finishes.
+
+<br/>
+<br/>
+
+Additionally databases can be merged with the following command if they contain data about the same bundle.
+
+```
+java -cp BTATrack.jar core.Compact merge [database...]
+```
+
+One or more databases may be specified, if one is specified then it only sorts the default index according to timestamp and cleans up the disk space used. Each database will contain the same information after the program finishes.
 
 ### Dependancies
 
