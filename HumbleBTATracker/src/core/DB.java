@@ -31,7 +31,7 @@ public class DB{
 			dbname = ":memory:";
 		}
 		retry(dbname);
-		if(!backupdb.equals("")){
+		if(!backupdb.equals("")&&new File(backupdb).exists()){
 			try{
 				conn.createStatement().execute("restore from "+backupdb);
 			}catch(SQLException e){}

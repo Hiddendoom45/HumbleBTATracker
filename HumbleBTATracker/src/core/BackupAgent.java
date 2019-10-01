@@ -19,7 +19,6 @@ public class BackupAgent{
 			public void run(){
 				for(DB db:list){
 					db.backup();
-					
 				}
 			}
 		});
