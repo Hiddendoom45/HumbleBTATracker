@@ -7,6 +7,10 @@ Tracks Humble Bundle's Beat the Average prices as it fluctuates
 
 This should help with determining whether to buy now or wait for the average to decrease for bundles with Beat the Average tiers.
 
+## Important Update
+
+As of Thursday October 31, 2019 has disabled the bundlestats api breaking the program, an update will be released soon to fix this.
+
 ## Installation
 
 Currently only a java version is available. To use, install the latest version of java 
