@@ -91,7 +91,7 @@ public class Compact{
 	
 	private void finish() throws SQLException{
 		conn.close();
-		if(primary)connb.createStatement().execute("backup to "+mergename);
+		if(primary)connb.createStatement().execute("backup to '"+mergename+"'");
 		connb.close();
 	}
 	private static class PriceSet implements Comparable<PriceSet>{
