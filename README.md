@@ -9,7 +9,7 @@ This should help with determining whether to buy now or wait for the average to 
 
 ## Important Update
 
-As of Thursday October 31, 2019 humble bundle has disabled the bundlestats api breaking the program, an update will be released soon to fix this.
+As of Thursday October 31, 2019 humble bundle has disabled the bundlestats api breaking the program, version 2.0 + no longer depends on the API.
 
 ## Installation
 
@@ -54,7 +54,7 @@ java -cp BTATrack.jar core.Compact [database...]
 
 The database is compressed by removing duplicate entries with the same price keeping only the times it was first seen and last seen.
 
-One or more databases may be specified, if more than one is specified then it will assume the data is from the same bundle and merge the data together and compress them. Each database will contain the same compressed information after the program finishes.
+One or more databases may be specified, if more than one is specified then it will assume the data is from the same bundle and merge the data together and compress them. The compressed information will be put into a new database that has the name of the first database with the suffix _compact.
 
 <br/>
 <br/>
@@ -65,7 +65,7 @@ Additionally databases can be merged with the following command if they contain 
 java -cp BTATrack.jar core.Compact merge [database...]
 ```
 
-One or more databases may be specified, if one is specified then it only sorts the default index according to timestamp and cleans up the disk space used. Each database will contain the same information after the program finishes.
+One or more databases may be specified, if one is specified then it only sorts the default index according to timestamp and cleans up the disk space used. The merged information will be put into a new database that has the name of the first database with the suffix _merged.
 
 ### Dependancies
 
