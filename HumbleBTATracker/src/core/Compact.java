@@ -1,5 +1,6 @@
 package core;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -17,23 +18,30 @@ import java.util.PriorityQueue;
  */
 public class Compact{
 	private Connection conn;
+	private Connection connb;
 	private ResultSet data;
 	private PreparedStatement insert;
+	private String mergename;
 	
 	//merge mode, does not compact data, keeps all entries
-	boolean noCompact = false;
+	private boolean noCompact = false;
+	private boolean primary = false;
+
 	//last row
 	private long timestamp = -1;
 	private int sales = 0;
 	private double paid = 0;
 	
-	public Compact(String filename, boolean compact) throws SQLException{
+	public Compact(String filename, boolean compact, boolean primary) throws SQLException{
 		conn = DriverManager.getConnection("jdbc:sqlite:"+filename);
-		conn.createStatement().execute("DROP TABLE IF EXISTS HB_DATA_COPY");
-		conn.createStatement().execute("CREATE TABLE HB_DATA_COPY (SALES INT, TIMESTAMP INT PRIMARY KEY, PAID REAL)");
 		data = conn.createStatement().executeQuery("SELECT * FROM HB_DATA ORDER BY TIMESTAMP ASC");
-		insert = conn.prepareStatement("INSERT INTO HB_DATA_COPY VALUES (?,?,?)");
+		connb = DriverManager.getConnection("jdbc:sqlite::memory:");
+		connb.createStatement().execute("CREATE TABLE IF NOT EXISTS HB_DATA (SALES INT, TIMESTAMP INT PRIMARY KEY, PAID REAL)");
+		insert = connb.prepareStatement("INSERT INTO HB_DATA VALUES (?,?,?)");
 		this.noCompact = !compact;
+		this.primary = primary;
+		int dot = filename.lastIndexOf('.');
+		mergename = filename.substring(0, dot)+(noCompact?"_merged":"_compact")+filename.substring(dot);
 	}
 	
 	public PriceSet next() throws SQLException{
@@ -82,9 +90,9 @@ public class Compact{
 	}
 	
 	private void finish() throws SQLException{
-		conn.createStatement().execute("DROP TABLE HB_DATA");
-		conn.createStatement().execute("ALTER TABLE HB_DATA_COPY RENAME TO HB_DATA");
-		conn.createStatement().execute("VACUUM");
+		conn.close();
+		if(primary)connb.createStatement().execute("backup to "+mergename);
+		connb.close();
 	}
 	private static class PriceSet implements Comparable<PriceSet>{
 		Compact source;
@@ -138,16 +146,21 @@ public class Compact{
 	}
 	
 	public static void main(String[] args) throws SQLException{
+
 		boolean compact = true;
 		if(args.length>0&&args[0].equalsIgnoreCase("merge")){
 			compact = false;
 			args = Arrays.copyOfRange(args, 1, args.length);
 		}
 		if(args.length==0){
-			System.out.println("Requires at least 1 argument for database in");
+			System.err.println("Requires at least 1 argument for database in");
 		}
 		else if(args.length==1){
-			Compact c = new Compact(args[0], compact);
+			if(!new File(args[0]).exists()){
+				System.err.println("Database file does not exist: "+args[0]);
+				System.exit(1);
+			}
+			Compact c = new Compact(args[0], compact,true);
 			while(true){
 				PriceSet ps = c.next();
 				if(ps==null)break;
@@ -158,7 +171,11 @@ public class Compact{
 		else{
 			Compact[] dbs = new Compact[args.length];
 			for(int i = 0; i<dbs.length; i++){
-				dbs[i] = new Compact(args[i], compact);
+				if(!new File(args[i]).exists()){
+					System.err.println("Database file does not exist: "+args[i]);
+					System.exit(1);
+				}
+				dbs[i] = new Compact(args[i], compact, i==0?true:false);
 			}
 			PriorityQueue<PriceSet> queue = new PriorityQueue<PriceSet>();
 			for(int i = 0; i<dbs.length; i++){
@@ -183,9 +200,7 @@ public class Compact{
 					}
 					p.merge(p2);
 				}
-				for(int i = 0; i<dbs.length; i++){
-					dbs[i].insert(p);
-				}
+				dbs[0].insert(p);
 			}
 			for(int i = 0; i<dbs.length; i++){
 				dbs[i].finish();
