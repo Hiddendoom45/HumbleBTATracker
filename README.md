@@ -9,7 +9,7 @@ This should help with determining whether to buy now or wait for the average to 
 
 ## Important Update
 
-As of Thursday October 31, 2019 has disabled the bundlestats api breaking the program, an update will be released soon to fix this.
+As of Thursday October 31, 2019 humble bundle has disabled the bundlestats api breaking the program, an update will be released soon to fix this.
 
 ## Installation
 
