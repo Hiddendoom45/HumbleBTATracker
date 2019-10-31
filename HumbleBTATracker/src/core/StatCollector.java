@@ -1,13 +1,11 @@
 package core;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.Connection.Response;
 
 /**
@@ -21,15 +19,17 @@ public class StatCollector implements Runnable{
 	
 	private Consumer<HBStat> callback;
 	
+	private boolean decay;
 	//change to false to stop loop
 	public volatile boolean run = true;
 	
 	private volatile boolean running = false;
 	
 	//api url and database to put data into
-	public StatCollector(String apiURL, DB db){
+	public StatCollector(String apiURL, DB db, boolean decay){
 		this.apiURL = apiURL;
 		this.db = db;
+		this.decay = decay;
 	}
 	
 	public boolean setCallback(Consumer<HBStat> callback){
@@ -41,36 +41,42 @@ public class StatCollector implements Runnable{
 	//loop to run within executor or something else
 	@Override
 	public void run(){
+		int minWait = 1;
+		int t = 0;
 		running = true;
-		Matcher units = Pattern.compile("\"units\": (\\d*)").matcher("");
-		Matcher timestamp = Pattern.compile("\"timestamp\": (\\d*)").matcher("");
-		Matcher gmv = Pattern.compile("\"gmv\": \"([0-9.]*)\"").matcher("");
-		SimpleDateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zz");
 		while(run){
 			try{
-				Response res = Jsoup.connect(apiURL).ignoreContentType(true).execute();
-				units.reset(res.body());
-				timestamp.reset(res.body());
-				gmv.reset(res.body());
-				if(units.find()&&timestamp.find()&&gmv.find()){
-					HBStat stat = new HBStat(
-							Integer.parseInt(units.group(1)),
-							Long.parseLong(timestamp.group(1)),
-							Double.parseDouble(gmv.group(1)));
-					db.addStat(stat);
-					if(callback!=null)callback.accept(stat);
+				Response res = Jsoup.connect(apiURL).execute();
+				long timestamp = System.currentTimeMillis()/1000;
+				Document doc = res.parse();
+				Element table = doc.getElementsByClass("st-numbers-table").get(0);
+				double paid = Double.parseDouble(table.child(0).child(0).child(1).text().replaceAll("[$,]", ""));
+				int sold = Integer.parseInt(table.child(0).child(1).child(1).text().replaceAll("[,]", ""));
+				HBStat stat = new HBStat(sold,timestamp, paid);
+				db.addStat(stat);
+				if(callback!=null)callback.accept(stat);
+				TimeUnit.MINUTES.sleep(minWait);
+				if(decay){
+					t++;
+					if(minWait==1&&t==60){
+						minWait = 15;
+						t = 0;
+					}
+					else if(minWait==15&&t==20){
+						minWait = 60;
+						t = 0;
+					}
+					
 				}
-				Date expire = format.parse(res.header("expires"));
-				long delay = expire.getTime()-System.currentTimeMillis();
-				if(expire.getTime()-System.currentTimeMillis()<500){
-					delay = 3000;
-				}
-				TimeUnit.MILLISECONDS.sleep(delay);
 			}catch(InterruptedException e){
+				break;
+			}catch(NumberFormatException | IndexOutOfBoundsException e){
+				e.printStackTrace();
+				System.out.println("Failure parsing page data "+apiURL);
 				break;
 			}catch(Exception e){
 				try{
-					TimeUnit.SECONDS.sleep(3);
+					TimeUnit.MINUTES.sleep(1);
 				}catch(InterruptedException e1){
 					break;
 				}

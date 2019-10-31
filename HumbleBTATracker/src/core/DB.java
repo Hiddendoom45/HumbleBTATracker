@@ -77,6 +77,8 @@ public class DB{
 	}
 	private HBStat oldestSince(long timestamp){
 		try{
+			//connection delay offset
+			timestamp-=10;
 			get.setLong(1, timestamp);
 			ResultSet res = get.executeQuery();
 			HBStat stat =  new HBStat(res.getInt(1),res.getLong(2),res.getDouble(3));

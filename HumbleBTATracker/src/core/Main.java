@@ -1,15 +1,9 @@
 package core;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 
 public class Main{
 	
@@ -42,6 +36,11 @@ public class Main{
 		else{
 			db = new DB();
 		}
+		boolean decay = true;
+		if(args[0].startsWith("nodecay:")){
+			args[0] = args[0].substring("nodecay:".length());
+			decay = false;
+		}
 		URL url = null;
 		try{
 			url = new URL(args[0]);
@@ -49,26 +48,10 @@ public class Main{
 			System.err.println("Bad URL, "+args[0]);
 			return;
 		}
-		try{
-			Document doc = Jsoup.connect(url.toString()).get();
-			String bundleJson = doc.getElementById("webpack-bundle-data").toString();
-			Matcher m = Pattern.compile("\"hash_for_stats\": \"([^\"]*)\"").matcher(bundleJson);
-			Matcher m2 = Pattern.compile("\"static_url\": \"([^\"]*)\"").matcher(bundleJson);
-			Matcher m3 = Pattern.compile("\"product_machine_name\": \"([^\"]*)\"").matcher(bundleJson);
-			if(m.find()&&m2.find()&&m3.find()){
-				StatCollector collector = new StatCollector(m2.group(1)+"/humbler/bundlestats/"+m3.group(1)+"/"+m.group(1), db);
-				collector.setCallback(new Printer());
-				Thread t = new Thread(collector);
-				t.start();
-			}
-			else{
-				System.out.println("fail");
-			}
-		}catch(IOException e){
-			e.printStackTrace();
-		}
-		
-		
+		StatCollector collector = new StatCollector(url.toString(), db, decay);
+		collector.setCallback(new Printer());
+		Thread t = new Thread(collector);
+		t.start();
 	}
 	
 	private static class Printer implements Consumer<HBStat>{
