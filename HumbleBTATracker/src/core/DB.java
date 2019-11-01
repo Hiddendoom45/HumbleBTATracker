@@ -9,9 +9,10 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
-public class DB{
+public class DB implements Iterable<HBStat>{
 	private Connection conn;
 	private PreparedStatement insert = null;
 	private PreparedStatement get = null;
@@ -37,7 +38,6 @@ public class DB{
 			}catch(SQLException e){}
 		}
 	}
-	
 	public void retry(String filename){
 		try{
 			conn = DriverManager.getConnection("jdbc:sqlite:"+filename);
@@ -47,6 +47,38 @@ public class DB{
 			recent = conn.prepareStatement("SELECT * FROM HB_DATA ORDER BY TIMESTAMP DESC LIMIT 1");
 		}catch(Exception e){
 			e.printStackTrace();
+		}
+	}
+	/**
+	 * Iterator on the data in the table, should not be used when data is actively being written to database. 
+	 * @return null if something fails. 
+	 * @throws SQLException
+	 */
+	public Iterator<HBStat> iterator(){
+		try{
+			ResultSet r = conn.createStatement().executeQuery("SELECT * FROM HB_DATA ORDER BY TIMESTAMP ASC");
+			return new Iterator<HBStat>(){
+				boolean hasNext = r.next();
+				@Override
+				public boolean hasNext(){
+					return hasNext;
+				}
+
+				@Override
+				public HBStat next(){
+					try{
+						HBStat stat = new HBStat(r.getInt("SALES"), r.getLong("TIMESTAMP"), r.getDouble("PAID"));
+						hasNext = r.next();
+						return stat;
+					}catch(SQLException e){
+						e.printStackTrace();
+					}
+					return null;
+				}
+			};
+		}catch(SQLException e){
+			e.printStackTrace();
+			return null;
 		}
 	}
 	public void addStat(HBStat stat){
