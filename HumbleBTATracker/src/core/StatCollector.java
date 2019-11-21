@@ -49,6 +49,10 @@ public class StatCollector implements Runnable{
 				Response res = Jsoup.connect(apiURL).execute();
 				long timestamp = System.currentTimeMillis()/1000;
 				Document doc = res.parse();
+				if(doc.getElementsByClass("st-numbers-table").size()==0){
+					System.out.println("Bundle ended: "+apiURL);
+					break;
+				}
 				Element table = doc.getElementsByClass("st-numbers-table").get(0);
 				double paid = Double.parseDouble(table.child(0).child(0).child(1).text().replaceAll("[$,]", ""));
 				int sold = Integer.parseInt(table.child(0).child(1).child(1).text().replaceAll("[,]", ""));
