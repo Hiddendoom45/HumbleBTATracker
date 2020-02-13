@@ -54,7 +54,7 @@ public class StatCollector implements Runnable{
 					break;
 				}
 				Element table = doc.getElementsByClass("st-numbers-table").get(0);
-				double paid = Double.parseDouble(table.child(0).child(0).child(1).text().replaceAll("[$,]", ""));
+				double paid = Double.parseDouble(table.child(0).child(0).child(1).text().replaceAll("[^0-9.]", ""));
 				int sold = Integer.parseInt(table.child(0).child(1).child(1).text().replaceAll("[,]", ""));
 				HBStat stat = new HBStat(sold,timestamp, paid);
 				db.addStat(stat);
