@@ -1,0 +1,22 @@
+[package]
+name = "humble_btatracker_rust"
+version = "0.1.0"
+authors = ["hiddendoom45 <hiddendoom45@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+select = "0.5.0"
+regex = "1"
+retry = "1.1.0"
+#lazy_static = "1.4.0"
+
+[dependencies.reqwest]
+version = "0.10.8"
+features = ["blocking"]
+
+[dependencies.rusqlite]
+version = "0.24.0"
+features = ["backup"]
+
